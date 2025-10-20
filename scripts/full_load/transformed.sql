@@ -1,7 +1,7 @@
 
  --TRANSFORMATION IN SILVER
 /*
-Welcome to the transformation phase of the ETL process. Here data was extracted and transformed,
+Welcome to the transformation phase of the ETL process. Here data was extracted from the bronze layer and transformed,
 basic transformation processes such as data deduplication, segmentation, standardization datatype conversion and much more.
 the result of this transformation was persisted in the silver layer that holds clean transfomed data ready for aggregation.
 */
