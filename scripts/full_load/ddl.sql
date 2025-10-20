@@ -1,5 +1,9 @@
+/*
+dataset in the local repository was loaded to a staging area from whereit would be directly loaded to the bronze layer
+This script shows how the database schemas  Bronze, silver and gold layers were created in snowflake using SQL.
+Also SQL was used for the creation and as well the loading of parquet file into the stage area
+*/
 --to create  database and schema in snowflake
-
 CREATE DATABASE full_load_NYC_TAXI;
 
 CREATE SCHEMA bronze;
