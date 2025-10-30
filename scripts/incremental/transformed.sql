@@ -1,319 +1,111 @@
----------inserting records from bronze taxi 2024-01 to silverlayer
-
-
-----initial full load
-
-
-
- INSERT INTO silver.transf_yellow_tripdate_2024
- (
- SELECT 
-        ROW_NUMBER() OVER(ORDER BY "tpep_pickup_datetime") as primary_key,
-        "VendorID" as vendor_id,
-        TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR) as pickup_time,
-        TO_TIMESTAMP("tpep_dropoff_datetime"::VARCHAR) as dropoff_time,
-        date_trunc(month,TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR)) as months,
-        "passenger_count" as total_passengers,
-        "trip_distance",
-       CASE
-            WHEN "trip_distance"  BETWEEN  0.01 AND 79721.73  THEN  'Extra shorT' 
-            WHEN "trip_distance"  BETWEEN  80721.74 AND 159443.46  THEN 'Short' 
-            WHEN "trip_distance"  BETWEEN  159443.47 AND 239165.19 THEN 'Medium' 
-            WHEN "trip_distance"  BETWEEN  239165.20 AND 318886.92 THEN 'Long' 
-            WHEN "trip_distance"  BETWEEN  318886.93 AND 398608.62 THEN 'Exteme long' 
-        ELSE 'None'
-     END AS distance_group,
-         CASE    "RatecodeID"
-        WHEN  1 THEN 'Standard rate'
-        WHEN  2 THEN 'JFK'
-        WHEN  3 THEN 'Newark'
-        WHEN  4 THEN 'Nassau or Westchester'
-        WHEN  5 THEN 'Negotiated fare'
-        WHEN  6 THEN 'Group ride'
-        WHEN  99 THEN NulL
-    ELSE null
-    END AS ratecode_group,
-     CASE 
-        WHEN "store_and_fwd_flag" ='N' THEN 'No'
-        WHEN "store_and_fwd_flag" ='Y' THEN'Yes'
-    ELSE 'Not indicated'
-    END AS store_and_fwd_indication,
-    "PULocationID" AS taximeter_engaged_zone,
-    "DOLocationID" AS taximeter_disengaged_zone,
-     CASE "payment_type"
-        WHEN 0 THEN 'Flex Fare trip'
-        WHEN 1 THEN 'Credit card'
-        WHEN 2 THEN 'Cash'
-        WHEN 3 THEN 'No charge'
-        WHEN 4 THEN 'Dispute'
-        WHEN 5 THEN 'Unknown'
-     ELSE 'Voided trip'
-    END AS "payment_type", 
-    "fare_amount",
-    REPLACE("extra",'-','') as extra, 
-    "mta_tax" AS metered_rate_tax,
-    "tip_amount" AS creditcard_tip_amount,
-    "tolls_amount",
-    "improvement_surcharge",
-    "total_amount" AS total_amount_excluding_cash_tip,
-    "congestion_surcharge",
-    "Airport_fee" AS LaGuardia_JFK_fee, 
-    current_date AS last_updated_at
-
-FROM raw_inc_yellow_tripdate_2024 
-WHERE "VendorID" IN (1,2,6,7) AND "payment_type" IN(0,1,2,3,4,5,6)
-);
-
-select * from silver.transf_yellow_tripdate_2024
-
-
-----loading susequent data from bronze to silver using merge and target
-
- CREATE OR REPLACE STREAM raw_stream_2024 ON TABLE raw_inc_yellow_tripdate_2024
-
-    select * from raw_stream_2024  
-
--- Create a task that runs every minute and includes transformations
-CREATE OR REPLACE TASK load_new_nyc_data
- SCHEDULE='1 MINUTE'
-  WAREHOUSE = compute_wh
-
-WHEN
-  SYSTEM$STREAM_HAS_DATA(' raw_stream_2024')
-AS
-   INSERT INTO silver.transf_yellow_tripdate_2024
- (  primary_key,
-    vendor_id,
-    pickup_time, 
-	dropoff_time,
-    months, 
-    total_passengers, 
-    trip_distance, 
-    distance_group, 
-    ratecode_group,
-    store_and_fwd_indication,
-    taximeter_engaged_zone, 
-    taximeter_disengaged_zone, 
-    payment_type, 
-    fare_amount,
-    extra, 
-    metered_rate_tax,
-    creditcard_tip_amount, 
-    tolls_amount, 
-	improvement_surcharge,  
-	total_amount_excluding_cash_tip,
-	congestion_surcharge, 
-	LaGuardia_JFK_fee, 
-    last_updated_at
-    )
- SELECT 
-        ROW_NUMBER() OVER(ORDER BY "tpep_pickup_datetime") as primary_key,
-        "VendorID" as vendor_id,
-        TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR) as pickup_time,
-        TO_TIMESTAMP("tpep_dropoff_datetime"::VARCHAR) as dropoff_time,
-        date_trunc(month,TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR)) as months,
-        "passenger_count" as total_passengers,
-        "trip_distance",
-       CASE
-            WHEN "trip_distance"  BETWEEN  0.01 AND 79721.73  THEN  'Extra shorT' 
-            WHEN "trip_distance"  BETWEEN  80721.74 AND 159443.46  THEN 'Short' 
-            WHEN "trip_distance"  BETWEEN  159443.47 AND 239165.19 THEN 'Medium' 
-            WHEN "trip_distance"  BETWEEN  239165.20 AND 318886.92 THEN 'Long' 
-            WHEN "trip_distance"  BETWEEN  318886.93 AND 398608.62 THEN 'Exteme long' 
-        ELSE 'None'
-     END AS distance_group,
-         CASE    "RatecodeID"
-        WHEN  1 THEN 'Standard rate'
-        WHEN  2 THEN 'JFK'
-        WHEN  3 THEN 'Newark'
-        WHEN  4 THEN 'Nassau or Westchester'
-        WHEN  5 THEN 'Negotiated fare'
-        WHEN  6 THEN 'Group ride'
-        WHEN  99 THEN NulL
-    ELSE null
-    END AS ratecode_group,
-     CASE 
-        WHEN "store_and_fwd_flag" ='N' THEN 'No'
-        WHEN "store_and_fwd_flag" ='Y' THEN'Yes'
-    ELSE 'Not indicated'
-    END AS store_and_fwd_indication,
-    "PULocationID" AS taximeter_engaged_zone,
-    "DOLocationID" AS taximeter_disengaged_zone,
-     CASE "payment_type"
-        WHEN 0 THEN 'Flex Fare trip'
-        WHEN 1 THEN 'Credit card'
-        WHEN 2 THEN 'Cash'
-        WHEN 3 THEN 'No charge'
-        WHEN 4 THEN 'Dispute'
-        WHEN 5 THEN 'Unknown'
-     ELSE 'Voided trip'
-    END AS "payment_type", 
-    "fare_amount",
-    REPLACE("extra",'-','') as extra, 
-    "mta_tax" AS metered_rate_tax,
-    "tip_amount" AS creditcard_tip_amount,
-    "tolls_amount",
-    "improvement_surcharge",
-    "total_amount" AS total_amount_excluding_cash_tip,
-    "congestion_surcharge",
-    "Airport_fee" AS LaGuardia_JFK_fee, 
-    current_date AS last_updated_at
-FROM raw_inc_yellow_tripdate_2024 
-WHERE
-    METADATA$ACTION = 'INSERT';
-
-ALTER TASK load_new_nyc_data RESUME;
-
-EXECUTE TASK load_new_nyc_data
-DESCRIBE STREAM raw_stream_2024
+---------inserting records from bronze  to silverlayer
+/*
+This method uses both streams as metadata for tracking changes(insert) on the raw table 
+and load the transformation to the silver layer)
+*/
 
 
 
-select * from silver.transf_yellow_tripdate_2024
+-----------------------------------------------------------------------------------------
 
-
------------------------------------------------------------------------------------------------------------------------------------------------------------
-MERGE INTO silver.transf_yellow_tripdate_2024 AS target
+   MERGE INTO silver.trans_nyc_taxi AS T
 USING (
-        SELECT * 
-        FROM raw_inc_yellow_tripdate_2024
-        WHERE last_updated_at > (SELECT MAX(last_updated_at)
-                                 FROM silver.transf_yellow_tripdate_2024)
- ) AS source
- ON target.vendor_id = source."VendorID"
-        
-WHEN MATCHED AND source.last_updated_at > target.last_updated_at THEN
-UPDATE SET
-vendor_id = source."VendorID"
-
-WHEN NOT MATCHED THEN 
- INSERT INTO silver.transf_yellow_tripdate_2024
- (
- SELECT 
-        ROW_NUMBER() OVER(ORDER BY "tpep_pickup_datetime") as primary_key,
-        "VendorID" as vendor_id,
-        TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR) as pickup_time,
-        TO_TIMESTAMP("tpep_dropoff_datetime"::VARCHAR) as dropoff_time,
-        date_trunc(month,TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR)) as months,
-        "passenger_count" as total_passengers,
-        "trip_distance",
-       CASE
-            WHEN "trip_distance"  BETWEEN  0.01 AND 79721.73  THEN  'Extra shorT' 
-            WHEN "trip_distance"  BETWEEN  80721.74 AND 159443.46  THEN 'Short' 
-            WHEN "trip_distance"  BETWEEN  159443.47 AND 239165.19 THEN 'Medium' 
-            WHEN "trip_distance"  BETWEEN  239165.20 AND 318886.92 THEN 'Long' 
-            WHEN "trip_distance"  BETWEEN  318886.93 AND 398608.62 THEN 'Exteme long' 
-        ELSE 'None'
-     END AS distance_group,
-         CASE    "RatecodeID"
-        WHEN  1 THEN 'Standard rate'
-        WHEN  2 THEN 'JFK'
-        WHEN  3 THEN 'Newark'
-        WHEN  4 THEN 'Nassau or Westchester'
-        WHEN  5 THEN 'Negotiated fare'
-        WHEN  6 THEN 'Group ride'
-        WHEN  99 THEN NulL
-    ELSE null
-    END AS ratecode_group,
-     CASE 
-        WHEN "store_and_fwd_flag" ='N' THEN 'No'
-        WHEN "store_and_fwd_flag" ='Y' THEN'Yes'
-    ELSE 'Not indicated'
-    END AS store_and_fwd_indication,
-    "PULocationID" AS taximeter_engaged_zone,
-    "DOLocationID" AS taximeter_disengaged_zone,
-     CASE "payment_type"
-        WHEN 0 THEN 'Flex Fare trip'
-        WHEN 1 THEN 'Credit card'
-        WHEN 2 THEN 'Cash'
-        WHEN 3 THEN 'No charge'
-        WHEN 4 THEN 'Dispute'
-        WHEN 5 THEN 'Unknown'
-     ELSE 'Voided trip'
-    END AS "payment_type", 
-    "fare_amount",
-    REPLACE("extra",'-','') as extra, 
-    "mta_tax" AS metered_rate_tax,
-    "tip_amount" AS creditcard_tip_amount,
-    "tolls_amount",
-    "improvement_surcharge",
-    "total_amount" AS total_amount_excluding_cash_tip,
-    "congestion_surcharge",
-    "Airport_fee" AS LaGuardia_JFK_fee, 
-    current_date AS last_updated_at
-
-FROM raw_inc_yellow_tripdate_2024 
-WHERE "VendorID" IN (1,2,6,7) AND "payment_type" IN(0,1,2,3,4,5,6)
-)
-
-------------------------------------------------------------------------------------------------
-
-   MERGE INTO silver.transf_yellow_tripdate_2024 AS target
-    USING raw_stream_2024 AS source
-    ON target."VendorID" = source.vendor_id
-    
-    WHEN MATCHED AND source.METADATA$ACTION = 'INSERT' AND source.METADATA$ISUPDATE = TRUE THEN
-        UPDATE SET target.vendor_id = source."VendorID"
-        
-    WHEN NOT MATCHED AND source.METADATA$ACTION = 'INSERT'
-    THEN
-       
-     INSERT INTO silver.transf_yellow_tripdate_2024
-     (
-     SELECT 
-            ROW_NUMBER() OVER(ORDER BY "tpep_pickup_datetime") as primary_key,
-            "VendorID" as vendor_id,
-            TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR) as pickup_time,
-            TO_TIMESTAMP("tpep_dropoff_datetime"::VARCHAR) as dropoff_time,
-            date_trunc(month,TO_TIMESTAMP("tpep_pickup_datetime"::VARCHAR)) as months,
-            "passenger_count" as total_passengers,
-            "trip_distance",
-           CASE
-                WHEN "trip_distance"  BETWEEN  0.01 AND 79721.73  THEN  'Extra shorT' 
-                WHEN "trip_distance"  BETWEEN  80721.74 AND 159443.46  THEN 'Short' 
-                WHEN "trip_distance"  BETWEEN  159443.47 AND 239165.19 THEN 'Medium' 
-                WHEN "trip_distance"  BETWEEN  239165.20 AND 318886.92 THEN 'Long' 
-                WHEN "trip_distance"  BETWEEN  318886.93 AND 398608.62 THEN 'Exteme long' 
+    SELECT 
+        VendorID AS vendor_id,
+        TO_TIMESTAMP(tpep_pickup_datetime::VARCHAR) AS pickup_time,
+        TO_TIMESTAMP(tpep_dropoff_datetime::VARCHAR) AS dropoff_time,
+        DATE_TRUNC('month', TO_TIMESTAMP(tpep_pickup_datetime::VARCHAR)) AS months,
+        passenger_count AS total_passengers,
+        trip_distance,
+        CASE
+            WHEN trip_distance BETWEEN 0.01 AND 79721.73 THEN 'Extra short'
+            WHEN trip_distance BETWEEN 80721.74 AND 159443.46 THEN 'Short'
+            WHEN trip_distance BETWEEN 159443.47 AND 239165.19 THEN 'Medium'
+            WHEN trip_distance BETWEEN 239165.20 AND 318886.92 THEN 'Long'
+            WHEN trip_distance BETWEEN 318886.93 AND 398608.62 THEN 'Extreme long'
             ELSE 'None'
-         END AS distance_group,
-             CASE    "RatecodeID"
-            WHEN  1 THEN 'Standard rate'
-            WHEN  2 THEN 'JFK'
-            WHEN  3 THEN 'Newark'
-            WHEN  4 THEN 'Nassau or Westchester'
-            WHEN  5 THEN 'Negotiated fare'
-            WHEN  6 THEN 'Group ride'
-            WHEN  99 THEN NulL
-        ELSE null
+        END AS distance_group,
+        CASE RatecodeID
+            WHEN 1 THEN 'Standard rate'
+            WHEN 2 THEN 'JFK'
+            WHEN 3 THEN 'Newark'
+            WHEN 4 THEN 'Nassau or Westchester'
+            WHEN 5 THEN 'Negotiated fare'
+            WHEN 6 THEN 'Group ride'
+            WHEN 99 THEN NULL
+            ELSE NULL
         END AS ratecode_group,
-         CASE 
-            WHEN "store_and_fwd_flag" ='N' THEN 'No'
-            WHEN "store_and_fwd_flag" ='Y' THEN'Yes'
-        ELSE 'Not indicated'
+        CASE 
+            WHEN store_and_fwd_flag = 'N' THEN 'No'
+            WHEN store_and_fwd_flag = 'Y' THEN 'Yes'
+            ELSE 'Not indicated'
         END AS store_and_fwd_indication,
-        "PULocationID" AS taximeter_engaged_zone,
-        "DOLocationID" AS taximeter_disengaged_zone,
-         CASE "payment_type"
+        PULocationID AS taximeter_engaged_zone,
+        DOLocationID AS taximeter_disengaged_zone,
+        CASE payment_type
             WHEN 0 THEN 'Flex Fare trip'
             WHEN 1 THEN 'Credit card'
             WHEN 2 THEN 'Cash'
             WHEN 3 THEN 'No charge'
             WHEN 4 THEN 'Dispute'
             WHEN 5 THEN 'Unknown'
-         ELSE 'Voided trip'
-        END AS "payment_type", 
-        "fare_amount",
-        REPLACE("extra",'-','') as extra, 
-        "mta_tax" AS metered_rate_tax,
-        "tip_amount" AS creditcard_tip_amount,
-        "tolls_amount",
-        "improvement_surcharge",
-        "total_amount" AS total_amount_excluding_cash_tip,
-        "congestion_surcharge",
-        "Airport_fee" AS LaGuardia_JFK_fee, 
-        current_date AS last_updated_at
-    
-    FROM raw_inc_yellow_tripdate_2024 
-    WHERE "VendorID" IN (1,2,6,7) AND "payment_type" IN(0,1,2,3,4,5,6)
+            ELSE 'Voided trip'
+        END AS payment_type,
+        fare_amount,
+        REPLACE(extra, '-', '') AS extra,
+        mta_tax AS metered_rate_tax,
+        tip_amount AS creditcard_tip_amount,
+        tolls_amount,
+        improvement_surcharge,
+        total_amount AS total_amount_excluding_cash_tip,
+        congestion_surcharge,
+        Airport_fee AS LaGuardia_JFK_fee,
+        CURRENT_TIMESTAMP AS last_updated_at
+    FROM raw_stream
+) AS S
+ON T.vendor_id = S.vendor_id
+   AND T.pickup_time = S.pickup_time
+   AND T.dropoff_time = S.dropoff_time
+
+WHEN MATCHED THEN
+    UPDATE SET
+        T.total_passengers = S.total_passengers,
+        T.trip_distance = S.trip_distance,
+        T.distance_group = S.distance_group,
+        T.ratecode_group = S.ratecode_group,
+        T.store_and_fwd_indication = S.store_and_fwd_indication,
+        T.taximeter_engaged_zone = S.taximeter_engaged_zone,
+        T.taximeter_disengaged_zone = S.taximeter_disengaged_zone,
+        T.payment_type = S.payment_type,
+        T.fare_amount = S.fare_amount,
+        T.extra = S.extra,
+        T.metered_rate_tax = S.metered_rate_tax,
+        T.creditcard_tip_amount = S.creditcard_tip_amount,
+        T.tolls_amount = S.tolls_amount,
+        T.improvement_surcharge = S.improvement_surcharge,
+        T.total_amount_excluding_cash_tip = S.total_amount_excluding_cash_tip,
+        T.congestion_surcharge = S.congestion_surcharge,
+        T.LaGuardia_JFK_fee = S.LaGuardia_JFK_fee,
+        T.last_updated_at = S.last_updated_at
+
+WHEN NOT MATCHED  THEN
+    INSERT (
+        vendor_id, pickup_time, dropoff_time, months, total_passengers,
+        trip_distance, distance_group, ratecode_group, store_and_fwd_indication,
+        taximeter_engaged_zone, taximeter_disengaged_zone, payment_type, 
+        fare_amount, extra, metered_rate_tax, creditcard_tip_amount,
+        tolls_amount, improvement_surcharge, total_amount_excluding_cash_tip,
+        congestion_surcharge, LaGuardia_JFK_fee, last_updated_at
+    )
+    VALUES (
+        S.vendor_id, S.pickup_time, S.dropoff_time, S.months, S.total_passengers,
+        S.trip_distance, S.distance_group, S.ratecode_group, S.store_and_fwd_indication,
+        S.taximeter_engaged_zone, S.taximeter_disengaged_zone, S.payment_type, 
+        S.fare_amount, S.extra, S.metered_rate_tax, S.creditcard_tip_amount,
+        S.tolls_amount, S.improvement_surcharge, S.total_amount_excluding_cash_tip,
+        S.congestion_surcharge, S.LaGuardia_JFK_fee, S.last_updated_at
     );
 
+----loading subsequent data from bronze to silver using merge and target
+
+SELECT count(*) FROM silver.trans_nyc_taxi
