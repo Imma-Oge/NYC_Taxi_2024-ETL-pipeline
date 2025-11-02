@@ -8,6 +8,16 @@ and load the transformation to the silver layer)
 
 -----------------------------------------------------------------------------------------
 
+ 
+
+CREATE OR REPLACE PROCEDURE merge_nyc_taxi_data()
+RETURNS STRING
+LANGUAGE JAVASCRIPT
+AS
+$$
+    var sql_command = `
+    
+----to load delta files from stream         
    MERGE INTO silver.trans_nyc_taxi AS T
 USING (
     SELECT 
@@ -105,7 +115,28 @@ WHEN NOT MATCHED  THEN
         S.tolls_amount, S.improvement_surcharge, S.total_amount_excluding_cash_tip,
         S.congestion_surcharge, S.LaGuardia_JFK_fee, S.last_updated_at
     );
+   
+    `)
+       
+    
+    snowflake.execute({sqlText: sql_command});
+    return "Merge operation executed successfully.";
+$$;
 
-----loading subsequent data from bronze to silver using merge and target
 
-SELECT count(*) FROM silver.trans_nyc_taxi
+-----------------run the procedure
+
+CALL merge_nyc_taxi_data();
+
+-----automating with Task
+
+CREATE OR REPLACE TASK merge_nyc_taxi_task
+WAREHOUSE = my_wh
+SCHEDULE = '5 MINUTE'  
+WHEN SYSTEM$STREAM_HAS_DATA('raw_stream')
+AS
+CALL merge_nyc_taxi_data();
+
+
+------start the Task
+ALTER TASK merge_nyc_taxi_task RESUME;
