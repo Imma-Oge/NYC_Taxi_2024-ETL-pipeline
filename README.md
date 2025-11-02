@@ -22,6 +22,6 @@ Incremental Load Strategy: Efficient loading of only new or modified records, op
 
 Each approach is documented with clear explanations, practical scripts, and sample datasets organized in their respective directories.
 
-## Architecture diagram 
+## [Architecture diagram](architectue-diagram) 
 
-<img width="581" height="293" alt="ETL architecture" src="https://github.com/user-attachments/assets/a98036da-43d9-4555-b0bf-42e77c3c339c" />
+
