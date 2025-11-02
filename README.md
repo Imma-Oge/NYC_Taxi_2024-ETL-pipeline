@@ -22,6 +22,6 @@ Incremental Load Strategy: Efficient loading of only new or modified records, op
 
 Each approach is documented with clear explanations, practical scripts, and sample datasets organized in their respective directories.
 
-## [Architecture diagram](architectue-diagram) 
+## [Architecture diagram](architecture-diagram) 
 
 
