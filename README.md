@@ -25,19 +25,11 @@ Key Deliverables
 
 The architecture represents a modern data pipeline that moves data from raw source files through transformation stages into the analytical layer.
 
-Source (NYC Yellow Taxi CSV files)
-   ↓
-Staging Layer (Landing Zone)
-   ↓
-Warehouse Tables (Transformed and Cleaned Data)
-   ↓
-Analytics Layer (BI / Reporting)
-
-Pipeline Flow:
+<img width="568" height="316" alt="Image" src="https://github.com/user-attachments/assets/7f7508f3-d6ff-45ff-8967-962b6809ed50" />
 
 ## Process Overview
 
-Extract – Load NYC taxi trip data from CSV files.
+Extract – Load NYC taxi trip data from Parquet files.
 
 Transform – Clean, standardize, and prepare data for analytics.
 
@@ -49,55 +41,57 @@ The dataset used is the NYC Yellow Taxi Trip Data, which contains detailed infor
 
 Dataset Features
 
-Pickup and drop-off timestamps and locations
+* Pickup and drop-off timestamps and locations
 
-Trip distances and fare amounts
+* Trip distances and fare amounts
 
-Payment methods and tip amounts
+* Payment methods and tip amounts
 
-Passenger counts
+* Passenger counts
 
 These fields enable exploration of urban mobility patterns, peak hours, fare trends, and geographic demand across the city’s boroughs.
 
 Sample Columns
-Column	Description
-tpep_pickup_datetime	Trip start date and time
-tpep_dropoff_datetime	Trip end date and time
-passenger_count	Number of passengers per trip
-trip_distance	Distance covered during the trip
-payment_type	Payment method used
-fare_amount	Base fare for the trip
-tip_amount	Tip provided by the customer
-total_amount	Final billed amount
+| Column	| Description
+|----------------------|-------------------------
+| tpep_pickup_datetime | Trip start date and time
+| tpep_dropoff_datetime | Trip end date and time
+| passenger_count	     | Number of passengers per trip
+| trip_distance	     | Distance covered during the trip
+| payment_type	        | Payment method used
+| fare_amount	        | Base fare for the trip
+| tip_amount	        | Tip provided by the customer
+| total_amount	        | Final billed amount
 
 ## What This Project Demonstrates
 
 This repository provides a hands-on demonstration of:
 
-Full Load Strategy: Complete data refresh where the entire dataset is reloaded each cycle.
+* Full Load Strategy: Complete data refresh where the entire dataset is reloaded each cycle.
 
-Incremental Load Strategy: Load only new or modified records to improve performance and reduce resource consumption.
+* Incremental Load Strategy: Load only new or modified records to improve performance and reduce resource consumption.
 
-Data Quality Handling: Ensuring clean, consistent data during transformation.
+* Data Quality Handling: Ensuring clean, consistent data during transformation.
 
-SQL Optimization: Efficient query design for large-scale datasets.
+* SQL Optimization: Efficient query design for large-scale datasets.
 
 Each method includes documentation, practical SQL scripts, and sample datasets organized in their respective directories.
 
 ## Tools & Technologies
+
 Tool	Purpose
 SQL	Core ETL implementation and data transformation
-Data Warehouse (e.g., Snowflake / BigQuery)	Target storage for processed data
-Parquet / CSV Files	Raw data storage and ingestion format
+Data Warehouse (Snowflake)	Target storage for processed data
+Parquet Files	Raw data storage and ingestion format
 
 NYC_Taxi_2024-ETL-Pipeline/
 │
 ├── data/                 # Sample or raw datasets
 ├── full_load/            # SQL scripts for full load process
 ├── incremental_load/     # SQL scripts for incremental load process
-├── docs/                 # Documentation or architecture diagrams
+├── docs/                 # Architecture diagrams
 ├── README.md             # Project overview
-└── results/              # Example outputs or analysis
+         
 
 ## How to Run the Project
 
@@ -129,6 +123,8 @@ Gained hands-on experience in data validation and pipeline optimization.
 Future Improvements
 
 Add orchestration with tools like Airflow or Mage.
+
+Add Pipeline Health Monitoring and Alerts
 
 Integrate with cloud storage (e.g., GCS or S3).
 
