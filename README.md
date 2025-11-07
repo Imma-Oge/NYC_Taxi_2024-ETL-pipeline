@@ -79,10 +79,14 @@ Each method includes documentation, practical SQL scripts, and sample datasets o
 
 ## Tools & Technologies
 
-Tool	Purpose
-SQL	Core ETL implementation and data transformation
-Data Warehouse (Snowflake)	Target storage for processed data
-Parquet Files	Raw data storage and ingestion format
+| Tool |	Purpose
+|-------
+| SQL	| Core ETL implementation and data transformation
+| Data Warehouse(Snowflake) | Target storage for processed data
+| Parquet Files	| Raw data storage and ingestion format.
+
+## Projecct Structure
+```
 
 NYC_Taxi_2024-ETL-Pipeline/
 │
@@ -92,7 +96,7 @@ NYC_Taxi_2024-ETL-Pipeline/
 ├── docs/                 # Architecture diagrams
 ├── README.md             # Project overview
          
-
+```
 ## How to Run the Project
 
 * Clone this repository:
